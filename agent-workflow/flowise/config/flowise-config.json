@@ -1,0 +1,20 @@
+{
+    "PORT": 3001,
+    "CORS_ORIGINS": "*",
+    "IFRAME_ORIGINS": "*",
+    "FLOWISE_USERNAME": "admin",
+    "FLOWISE_PASSWORD": "1234",
+    "DATABASE_TYPE": "sqlite",
+    "DATABASE_PATH": "./database.sqlite",
+    "APIKEY_PATH": "./keys",
+    "LOG_LEVEL": "info",
+    "LOG_PATH": "./logs",
+    "SECRETKEY_PATH": "./keys",
+    "FLOWISE_SECRETKEY_OVERWRITE": "",
+    "DISABLE_FLOWISE_TELEMETRY": false,
+    "LANGCHAIN_TRACING_V2": false,
+    "LANGCHAIN_ENDPOINT": "",
+    "LANGCHAIN_API_KEY": "",
+    "LANGCHAIN_PROJECT": ""
+  }
+  

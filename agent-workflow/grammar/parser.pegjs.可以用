@@ -1,0 +1,98 @@
+{
+  // 定义一些辅助函数
+  function extractParameters(params) {
+    return params.map(p => p.trim());
+  }
+}
+
+Script
+  = _ statements:(Statement _)* {
+      return statements.map(s => s[0]);
+    }
+
+Statement
+  = GraphQLQuery
+  / OutputStatement
+  / ServiceCall
+
+GraphQLQuery
+  = "new" __ varName:Identifier __ "=" __ "gql" __ "query" __ "{" graphqlKey:Identifier "}" ";" {
+      return {
+        type: "GraphQLQuery",
+        variableName: varName,
+        graphqlKey: graphqlKey
+      };
+    }
+
+OutputStatement
+  = "output" __ newVar:VariableName __ "=" __ oldVar:VariableName ";" {
+      return {
+        type: "Output",
+        newVariable: newVar,
+        oldVariable: oldVar
+      };
+    }
+
+ServiceCall
+  = "new" __ varName:Identifier __ "=" __ service:ServiceExpression ";" {
+      return {
+        type: "ServiceCall",
+        variableName: varName,
+        jarOrExe: service.jarOrExe,
+        path: service.path,
+        parameters: service.parameters
+      };
+    }
+
+ServiceExpression
+  = jarExe:JarOrExe "/" path:Identifier "(" params:ParameterList ")" {
+      return {
+        jarOrExe: jarExe,
+        path: path,
+        parameters: params
+      };
+    }
+
+JarOrExe
+  = exe:ExeFile {
+      return exe;
+    }
+  / jar:JarFile {
+      return jar;
+    }
+
+JarFile
+  = name:[a-zA-Z0-9_]+ ".jar" {
+      return name.join('') + ".jar";
+    }
+
+ExeFile
+  = name:[a-zA-Z0-9_]+ ".exe" {
+      return name.join('') + ".exe";
+    }
+
+ParameterList
+  = head:Parameter tail:("," _ Parameter)* {
+      console.log("head:", head, "tail:", tail);
+      return [head].concat(tail.map(function(e) { return e[2]; }));
+    }
+  / "" { return []; }
+
+Parameter
+  = VariableName
+
+VariableName
+  = name:[a-zA-Z0-9_.]+ {
+      return name.join('');
+    }
+
+Identifier
+  = name:[a-zA-Z0-9_]+ {
+      return name.join('');
+    }
+
+__ "whitespace"
+  = [ \t]+
+
+_ "optional whitespace"
+  = [ \t\r\n]*

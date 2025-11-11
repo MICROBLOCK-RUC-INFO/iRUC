@@ -1,0 +1,229 @@
+{
+    "nodes": [
+      {
+        "width": 300,
+        "height": 329,
+        "id": "chatOpenAI_0",
+        "position": {
+          "x": 842.5894353070312,
+          "y": 129.47264172208813
+        },
+        "type": "customNode",
+        "data": {
+          "id": "chatOpenAI_0",
+          "label": "智能体1-代码识别",
+          "version": 6,
+          "name": "chatOpenAI",
+          "type": "ChatOpenAI",
+          "baseClasses": [
+            "ChatOpenAI",
+            "BaseChatModel",
+            "BaseLanguageModel"
+          ],
+          "category": "Chat Models",
+          "description": "Claude模型用于代码块识别",
+          "inputParams": [
+            {
+              "label": "Connect Credential",
+              "name": "credential",
+              "type": "credential",
+              "credentialNames": [
+                "openAIApi"
+              ],
+              "id": "chatOpenAI_0-input-credential-credential"
+            },
+            {
+              "label": "Model Name",
+              "name": "modelName",
+              "type": "asyncOptions",
+              "loadMethod": "listModels",
+              "default": "claude-3-7-sonnet-20250219",
+              "id": "chatOpenAI_0-input-modelName-asyncOptions"
+            },
+            {
+              "label": "Temperature",
+              "name": "temperature",
+              "type": "number",
+              "step": 0.1,
+              "default": 0.1,
+              "optional": true,
+              "id": "chatOpenAI_0-input-temperature-number"
+            }
+          ],
+          "inputAnchors": [
+            {
+              "label": "Cache",
+              "name": "cache",
+              "type": "BaseCache",
+              "optional": true,
+              "id": "chatOpenAI_0-input-cache-BaseCache"
+            }
+          ],
+          "inputs": {
+            "cache": "",
+            "modelName": "claude-3-7-sonnet-20250219",
+            "temperature": 0.1,
+            "maxTokens": "",
+            "topP": "",
+            "frequencyPenalty": "",
+            "presencePenalty": "",
+            "timeout": "",
+            "basepath": "",
+            "baseOptions": "",
+            "allowImageUploads": ""
+          },
+          "outputAnchors": [
+            {
+              "id": "chatOpenAI_0-output-chatOpenAI-ChatOpenAI",
+              "name": "chatOpenAI",
+              "label": "ChatOpenAI",
+              "description": "Claude模型用于代码块识别",
+              "type": "ChatOpenAI"
+            }
+          ]
+        }
+      },
+      {
+        "width": 300,
+        "height": 508,
+        "id": "conversationChain_0",
+        "position": {
+          "x": 1242.5894353070312,
+          "y": 129.47264172208813
+        },
+        "type": "customNode",
+        "data": {
+          "id": "conversationChain_0",
+          "label": "智能体工作流链",
+          "version": 1,
+          "name": "conversationChain",
+          "type": "ConversationChain",
+          "baseClasses": [
+            "ConversationChain",
+            "BaseChain",
+            "Runnable"
+          ],
+          "category": "Chains",
+          "description": "执行完整的智能体工作流",
+          "inputParams": [
+            {
+              "label": "Chain Name",
+              "name": "chainName",
+              "type": "string",
+              "placeholder": "Name your chain",
+              "optional": true,
+              "id": "conversationChain_0-input-chainName-string"
+            }
+          ],
+          "inputAnchors": [
+            {
+              "label": "Language Model",
+              "name": "model",
+              "type": "BaseLanguageModel",
+              "id": "conversationChain_0-input-model-BaseLanguageModel"
+            },
+            {
+              "label": "Memory",
+              "name": "memory",
+              "type": "BaseMemory",
+              "optional": true,
+              "id": "conversationChain_0-input-memory-BaseMemory"
+            }
+          ],
+          "inputs": {
+            "model": "{{chatOpenAI_0.data.instance}}",
+            "memory": "{{bufferMemory_0.data.instance}}",
+            "chainName": "智能体工作流"
+          },
+          "outputAnchors": [
+            {
+              "id": "conversationChain_0-output-conversationChain-ConversationChain",
+              "name": "conversationChain",
+              "label": "ConversationChain",
+              "description": "执行完整的智能体工作流",
+              "type": "ConversationChain"
+            }
+          ]
+        }
+      },
+      {
+        "width": 300,
+        "height": 253,
+        "id": "bufferMemory_0",
+        "position": {
+          "x": 442.5894353070312,
+          "y": 384.47264172208813
+        },
+        "type": "customNode",
+        "data": {
+          "id": "bufferMemory_0",
+          "label": "对话记忆",
+          "version": 1,
+          "name": "bufferMemory",
+          "type": "BufferMemory",
+          "baseClasses": [
+            "BufferMemory",
+            "BaseChatMemory",
+            "BaseMemory"
+          ],
+          "category": "Memory",
+          "description": "保存对话历史记录",
+          "inputParams": [
+            {
+              "label": "Memory Key",
+              "name": "memoryKey",
+              "type": "string",
+              "default": "chat_history",
+              "id": "bufferMemory_0-input-memoryKey-string"
+            },
+            {
+              "label": "Input Key",
+              "name": "inputKey",
+              "type": "string",
+              "default": "input",
+              "id": "bufferMemory_0-input-inputKey-string"
+            }
+          ],
+          "inputAnchors": [],
+          "inputs": {
+            "memoryKey": "chat_history",
+            "inputKey": "input"
+          },
+          "outputAnchors": [
+            {
+              "id": "bufferMemory_0-output-bufferMemory-BufferMemory",
+              "name": "bufferMemory",
+              "label": "BufferMemory",
+              "description": "保存对话历史记录",
+              "type": "BufferMemory"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "source": "chatOpenAI_0",
+        "sourceHandle": "chatOpenAI_0-output-chatOpenAI-ChatOpenAI",
+        "target": "conversationChain_0",
+        "targetHandle": "conversationChain_0-input-model-BaseLanguageModel",
+        "type": "buttonedge",
+        "id": "chatOpenAI_0-chatOpenAI_0-output-chatOpenAI-ChatOpenAI-conversationChain_0-conversationChain_0-input-model-BaseLanguageModel",
+        "data": {
+          "label": ""
+        }
+      },
+      {
+        "source": "bufferMemory_0",
+        "sourceHandle": "bufferMemory_0-output-bufferMemory-BufferMemory",
+        "target": "conversationChain_0",
+        "targetHandle": "conversationChain_0-input-memory-BaseMemory",
+        "type": "buttonedge",
+        "id": "bufferMemory_0-bufferMemory_0-output-bufferMemory-BufferMemory-conversationChain_0-conversationChain_0-input-memory-BaseMemory",
+        "data": {
+          "label": ""
+        }
+      }
+    ]
+  }
+  

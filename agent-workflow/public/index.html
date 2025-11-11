@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体工作流系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .workflow-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #333;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .progress-section.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e1e1e1;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .agent-status {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .agent-item {
+            padding: 8px 15px;
+            background: #e1e1e1;
+            border-radius: 20px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .agent-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .agent-item.completed {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-message {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .results-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .result-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e1e1e1;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .code-result {
+            background: #f8f9fa;
+            border: 1px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #28a745;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .agent-status {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 智能体工作流系统</h1>
+            <p>基于LangChain.js的代码转换工作流</p>
+        </div>
+
+        <div class="main-content">
+            <div class="workflow-section">
+                <h2 class="section-title">输入代码</h2>
+                
+                <form id="workflowForm">
+                    <div class="form-group">
+                        <label for="sourceCode">源代码:</label>
+                        <textarea id="sourceCode" name="code" required placeholder="请输入要转换的Go代码..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auxiliaryInfo">辅助信息:</label>
+                        <textarea id="auxiliaryInfo" name="auxiliaryInfo" placeholder="请输入辅助信息，如服务名、依赖关系等..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn" id="executeBtn">
+                        🚀 开始执行工作流
+                    </button>
+                </form>
+            </div>
+
+            <div class="progress-section" id="progressSection">
+                <h3 class="section-title">执行进度</h3>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <div class="agent-status" id="agentStatus">
+                    <div class="agent-item" data-agent="agent1">智能体1-代码识别</div>
+                    <div class="agent-item" data-agent="agent2">智能体2-函数封装</div>
+                    <div class="agent-item" data-agent="agent3">智能体3-插件打包</div>
+                    <div class="agent-item" data-agent="agent4">智能体4-脚本生成</div>
+                    <div class="agent-item" data-agent="agent5">智能体5-脚本组合</div>
+                    <div class="agent-item" data-agent="agent6">智能体6-功能校验</div>
+                </div>
+
+                <div class="status-message" id="statusMessage">
+                    准备开始执行...
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection">
+                <h3 class="section-title">执行结果</h3>
+                
+                <div class="result-tabs">
+                    <button class="tab-btn active" onclick="showTab('script')">生成脚本</button>
+                    <button class="tab-btn" onclick="showTab('plugin')">插件代码</button>
+                </div>
+
+                <div id="script-tab" class="tab-content active">
+                    <div class="code-result" id="scriptResult"></div>
+                </div>
+
+                <div id="plugin-tab" class="tab-content">
+                    <div class="code-result" id="pluginResult"></div>
+                </div>
+            </div>
+
+            <div id="messageContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        class WorkflowUI {
+            constructor() {
+                this.ws = null;
+                this.initializeEventListeners();
+                this.connectWebSocket();
+            }
+
+            initializeEventListeners() {
+                const form = document.getElementById('workflowForm');
+                form.addEventListener('submit', (e) => this.handleSubmit(e));
+            }
+
+            connectWebSocket() {
+                try {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}`;
+                    
+                    this.ws = new WebSocket(wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        console.log('WebSocket连接已建立');
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleWebSocketMessage(data);
+                    };
+                    
+                    this.ws.onclose = () => {
+                        console.log('WebSocket连接已关闭');
+                        setTimeout(() => this.connectWebSocket(), 5000);
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket错误:', error);
+                    };
+                } catch (error) {
+                    console.warn('WebSocket连接失败，使用轮询模式');
+                }
+            }
+
+            handleWebSocketMessage(data) {
+                if (data.type === 'progress') {
+                    this.updateProgress(data.agentName, data.message, data.progress);
+                }
+            }
+
+            async handleSubmit(event) {
+                event.preventDefault();
+                
+                const formData = new FormData(event.target);
+                const code = formData.get('code');
+                const auxiliaryInfo = formData.get('auxiliaryInfo');
+
+                if (!code.trim()) {
+                    this.showMessage('请输入源代码', 'error');
+                    return;
+                }
+
+                this.showProgressSection();
+                this.resetProgress();
+                this.disableForm(true);
+
+                try {
+                    const response = await fetch('/api/workflow/execute', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ code, auxiliaryInfo })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.showResults(result.data);
+                        this.showMessage('工作流执行完成!', 'success');
+                    } else {
+                        this.showMessage(`执行失败: ${result.message}`, 'error');
+                    }
+                } catch (error) {
+                    this.showMessage(`网络错误: ${error.message}`, 'error');
+                } finally {
+                    this.disableForm(false);
+                }
+            }
+
+            showProgressSection() {
+                document.getElementById('progressSection').classList.add('show');
+            }
+
+            resetProgress() {
+                document.getElementById('progressFill').style.width = '0%';
+                document.getElementById('statusMessage').textContent = '准备开始执行...';
+                
+                const agentItems = document.querySelectorAll('.agent-item');
+                agentItems.forEach(item => {
+                    item.classList.remove('active', 'completed');
+                });
+            }
+
+            updateProgress(agentName, message, progress) {
+                document.getElementById('progressFill').style.width = `${progress * 100}%`;
+                document.getElementById('statusMessage').textContent = `${agentName}: ${message}`;
+                
+                // 更新智能体状态
+                const agentItems = document.querySelectorAll('.agent-item');
+                agentItems.forEach(item => {
+                    const isCurrentAgent = agentName.includes(item.textContent.split('-')[0]);
+                    
+                    item.classList.remove('active');
+                    
+                    if (isCurrentAgent) {
+                        if (progress >= 1.0) {
+                            item.classList.add('completed');
+                        } else {
+                            item.classList.add('active');
+                        }
+                    }
+                });
+            }
+
+            showResults(data) {
+                document.getElementById('resultsSection').classList.add('show');
+                document.getElementById('scriptResult').textContent = data.script || '无脚本内容';
+                document.getElementById('pluginResult').textContent = data.pluginCode || '无插件代码';
+            }
+
+            disableForm(disabled) {
+                const button = document.getElementById('executeBtn');
+                const textareas = document.querySelectorAll('textarea');
+                
+                button.disabled = disabled;
+                textareas.forEach(textarea => textarea.disabled = disabled);
+                
+                if (disabled) {
+                    button.textContent = '🔄 执行中...';
+                } else {
+                    button.textContent = '🚀 开始执行工作流';
+                }
+            }
+
+            showMessage(message, type) {
+                const container = document.getElementById('messageContainer');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `${type}-message`;
+                messageDiv.textContent = message;
+                
+                container.appendChild(messageDiv);
+                
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 5000);
+            }
+        }
+
+        function showTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-btn');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new WorkflowUI();
+        });
+    </script>
+</body>
+</html>
