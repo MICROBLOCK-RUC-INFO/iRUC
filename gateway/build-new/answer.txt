@@ -1,0 +1,402 @@
+根据您的需求，我将为您创建一个新的GraphQL子图服务来处理统计数据库。以下是完整的项目结构和代码：
+
+## 项目结构
+```
+graphql-statistic-service/
+├── package.json
+├── index.js
+├── db.js
+└── schema.js
+```
+
+## 完整代码
+
+### 1. package.json
+```json
+{
+  "name": "graphql-statistic-service",
+  "version": "1.0.0",
+  "description": "GraphQL Statistic Service for Apollo Federation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@apollo/server": "^4.0.0",
+    "@apollo/subgraph": "^2.0.0",
+    "apollo-server": "^3.0.0",
+    "express": "^4.18.0",
+    "sequelize": "^6.28.0",
+    "pg": "^8.8.0",
+    "pg-hstore": "^2.3.4",
+    "body-parser": "^1.20.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}
+```
+
+### 2. db.js
+```javascript
+const { Sequelize, DataTypes } = require('sequelize');
+
+// 创建与PostgreSQL数据库的连接
+const sequelize = new Sequelize('postgres://admin:12345678@localhost:5432/statistic_db', {
+  dialect: 'postgres',
+});
+
+// 定义DataPoint模型，映射到数据库中的DataPoints表
+const DataPoint = sequelize.define('DataPoint', {
+  id: {
+    type: DataTypes.JSONB,
+    primaryKey: true,
+    allowNull: false,
+  },
+  incomes: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    allowNull: true,
+  },
+  expenses: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    allowNull: true,
+  },
+  statistics: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+  },
+  rates: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+  },
+}, {
+  tableName: 'DataPoints',
+  timestamps: true, // 自动添加createdAt和updatedAt字段
+});
+
+module.exports = { sequelize, DataPoint };
+```
+
+### 3. schema.js
+```javascript
+const { gql } = require('apollo-server');
+const { DataPoint } = require('./db');
+
+// GraphQL类型定义
+const typeDefs = gql`
+  type DataPointId {
+    date: String!
+    account: String!
+  }
+
+  type Statistics {
+    SAVING_AMOUNT: Float
+    INCOMES_AMOUNT: Float
+    EXPENSES_AMOUNT: Float
+  }
+
+  type Rates {
+    EUR: Float
+    RUB: Float
+    USD: Float
+    BASE: Float
+  }
+
+  type DataPoint {
+    id: DataPointId!
+    incomes: [String]
+    expenses: [String]
+    statistics: Statistics
+    rates: Rates
+    createdAt: String
+    updatedAt: String
+  }
+
+  input DataPointIdInput {
+    date: String!
+    account: String!
+  }
+
+  input StatisticsInput {
+    SAVING_AMOUNT: Float
+    INCOMES_AMOUNT: Float
+    EXPENSES_AMOUNT: Float
+  }
+
+  input RatesInput {
+    EUR: Float
+    RUB: Float
+    USD: Float
+    BASE: Float
+  }
+
+  input DataPointInput {
+    id: DataPointIdInput!
+    incomes: [String]
+    expenses: [String]
+    statistics: StatisticsInput
+    rates: RatesInput
+  }
+
+  type Query {
+    getDataPointByAccount(account: String!): [DataPoint]
+    getDataPointById(id: DataPointIdInput!): DataPoint
+  }
+
+  type Mutation {
+    updateDataPoint(dataPoint: DataPointInput!): DataPoint
+    createDataPoint(dataPoint: DataPointInput!): DataPoint
+  }
+`;
+
+// GraphQL解析器定义
+const resolvers = {
+  Query: {
+    // 根据账户名查询数据点
+    async getDataPointByAccount(_, { account }) {
+      try {
+        const dataPoints = await DataPoint.findAll({
+          where: sequelize.where(
+            sequelize.cast(sequelize.col('id'), 'text'),
+            {
+              [sequelize.Op.like]: `%"account": "${account}"%`
+            }
+          )
+        });
+        return dataPoints;
+      } catch (error) {
+        console.error('查询数据点时出错:', error);
+        throw new Error('查询数据点失败');
+      }
+    },
+
+    // 根据ID查询特定数据点
+    async getDataPointById(_, { id }) {
+      try {
+        const dataPoint = await DataPoint.findOne({
+          where: {
+            id: id
+          }
+        });
+        return dataPoint;
+      } catch (error) {
+        console.error('根据ID查询数据点时出错:', error);
+        throw new Error('查询数据点失败');
+      }
+    }
+  },
+
+  Mutation: {
+    // 更新数据点（如果存在则更新，不存在则创建）
+    async updateDataPoint(_, { dataPoint }) {
+      try {
+        const [updatedDataPoint] = await DataPoint.upsert({
+          id: dataPoint.id,
+          incomes: dataPoint.incomes,
+          expenses: dataPoint.expenses,
+          statistics: dataPoint.statistics,
+          rates: dataPoint.rates,
+        });
+        return updatedDataPoint;
+      } catch (error) {
+        console.error('更新数据点时出错:', error);
+        throw new Error('更新数据点失败');
+      }
+    },
+
+    // 创建新的数据点
+    async createDataPoint(_, { dataPoint }) {
+      try {
+        const newDataPoint = await DataPoint.create({
+          id: dataPoint.id,
+          incomes: dataPoint.incomes,
+          expenses: dataPoint.expenses,
+          statistics: dataPoint.statistics,
+          rates: dataPoint.rates,
+        });
+        return newDataPoint;
+      } catch (error) {
+        console.error('创建数据点时出错:', error);
+        throw new Error('创建数据点失败');
+      }
+    }
+  },
+
+  // 字段解析器
+  DataPoint: {
+    id: (parent) => parent.id,
+    incomes: (parent) => parent.incomes,
+    expenses: (parent) => parent.expenses,
+    statistics: (parent) => parent.statistics,
+    rates: (parent) => parent.rates,
+    createdAt: (parent) => parent.createdAt ? parent.createdAt.toISOString() : null,
+    updatedAt: (parent) => parent.updatedAt ? parent.updatedAt.toISOString() : null,
+  }
+};
+
+module.exports = { typeDefs, resolvers };
+```
+
+### 4. index.js
+```javascript
+const { ApolloServer } = require('@apollo/server'); // Apollo Server 4.x
+const { buildSubgraphSchema } = require('@apollo/subgraph'); // Federation支持
+const express = require('express'); // 使用 Express 处理 HTTP 请求
+const { expressMiddleware } = require('@apollo/server/express4'); // Apollo Server 和 Express 集成
+const { typeDefs, resolvers } = require('./schema'); // 引入 schema 和 resolvers
+const { sequelize } = require('./db'); // 数据库连接
+const bodyParser = require('body-parser');
+
+// 创建 Apollo Server 实例，使用 Federation 支持
+const server = new ApolloServer({
+  schema: buildSubgraphSchema({
+    typeDefs,
+    resolvers,
+  }),
+});
+
+// 创建 Express 应用
+const app = express();
+
+// 启动 Apollo Server，并与 Express 集成
+async function startServer() {
+  try {
+    // 启动 Apollo Server
+    await server.start();
+    console.log('Apollo Server 启动成功');
+
+    app.use(bodyParser.json({ limit: '10mb' }));
+
+    // 使用 Apollo 中间件处理 /graphql 路由
+    app.use('/graphql', express.json(), expressMiddleware(server));
+
+    // 测试数据库连接
+    await sequelize.authenticate();
+    console.log('数据库连接成功');
+
+    // 同步数据库模型（开发环境使用，生产环境请谨慎使用）
+    await sequelize.sync({ alter: false }); // 不改变现有表结构
+    console.log('数据库同步完成');
+
+    // 启动 Express 服务器
+    app.listen({ port: 4002 }, () => {
+      console.log(`🚀 Statistic Subgraph ready at http://localhost:4002/graphql`);
+    });
+
+  } catch (error) {
+    console.error('启动服务时出错:', error);
+    process.exit(1);
+  }
+}
+
+// 启动服务
+startServer();
+```
+
+### 5. 更新网关服务 (gateway-service/index.js)
+您需要将新的统计服务添加到网关的服务列表中：
+
+```javascript
+const { ApolloServer } = require('@apollo/server');
+const { ApolloGateway } = require('@apollo/gateway');
+
+const express = require('express');
+const { expressMiddleware } = require('@apollo/server/express4');
+
+const gateway = new ApolloGateway({
+  serviceList: [
+    { name: 'account-service', url: 'http://localhost:4001/graphql' },
+    { name: 'statistic-service', url: 'http://localhost:4002/graphql' }, // 新增的统计服务
+  ],
+});
+
+const server = new ApolloServer({
+  gateway,
+  subscriptions: false,
+  introspection: true,
+});
+
+async function startServer() {
+  // 启动 Apollo Server
+  await server.start();
+
+  // 创建 Express 应用
+  const app = express();
+  app.use(express.json());
+
+  // 将 Apollo Server 中间件添加到 Express 应用
+  app.use('/graphql', expressMiddleware(server));
+
+  // 启动 HTTP 服务器
+  app.listen(4000, () => {
+    console.log(`🚀 Gateway ready at http://localhost:4000/graphql`);
+  });
+}
+
+// 启动服务
+startServer();
+```
+
+## 使用说明
+
+1. **安装依赖**：在 `graphql-statistic-service` 目录下运行 `npm install`
+
+2. **启动服务**：运行 `npm start` 启动统计服务（端口4002）
+
+3. **GraphQL查询示例**：
+   ```graphql
+   # 根据账户查询数据点
+   query {
+     getDataPointByAccount(account: "Alice") {
+       id {
+         date
+         account
+       }
+       incomes
+       expenses
+       statistics {
+         SAVING_AMOUNT
+         INCOMES_AMOUNT 
+         EXPENSES_AMOUNT
+       }
+       rates {
+         USD
+         EUR
+         RUB
+       }
+     }
+   }
+
+   # 更新数据点
+   mutation {
+     updateDataPoint(dataPoint: {
+       id: {
+         date: "2024-10-23T12:00:00Z"
+         account: "Alice"
+       }
+       incomes: ["Salary:5000", "Bonus:2000"]
+       expenses: ["Rent:1500", "Groceries:500"]
+       statistics: {
+         SAVING_AMOUNT: 3000
+         INCOMES_AMOUNT: 7000
+         EXPENSES_AMOUNT: 2000
+       }
+       rates: {
+         USD: 1.0
+         EUR: 0.85
+         RUB: 75.0
+       }
+     }) {
+       id {
+         date
+         account
+       }
+       statistics {
+         SAVING_AMOUNT
+       }
+     }
+   }
+   ```
+
+这个新的服务将完美集成到您现有的Apollo联合网关架构中，提供统计数据的查询和更新功能。

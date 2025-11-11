@@ -1,0 +1,219 @@
+现在有一个apollo的联合网关项目
+-----------------------------------------
+其gateway-service的index.js内容如下：
+
+const { ApolloServer } = require('@apollo/server');
+const { ApolloGateway } = require('@apollo/gateway');
+
+const express = require('express');
+const { expressMiddleware } = require('@apollo/server/express4');
+
+const gateway = new ApolloGateway({
+  serviceList: [
+    { name: 'account-service', url: 'http://localhost:4001/graphql' },
+  ],
+});
+
+const server = new ApolloServer({
+  gateway,
+  subscriptions: false,
+  introspection: true,
+});
+
+async function startServer() {
+  // 启动 Apollo Server
+  await server.start();
+
+  // 创建 Express 应用
+  const app = express();
+  app.use(express.json());
+
+  // 将 Apollo Server 中间件添加到 Express 应用
+  app.use('/graphql', expressMiddleware(server));
+
+  // 启动 HTTP 服务器
+  app.listen(4000, () => {
+    console.log(`🚀 Gateway ready at http://localhost:4000/graphql`);
+  });
+}
+
+// 启动服务
+startServer();
+--------------------------------------
+其某个具体数据库service内容如下：
+graphql-account-service：
+db.js内容如下：
+const { Sequelize, DataTypes } = require('sequelize');
+
+// 创建与PostgreSQL数据库的连接
+const sequelize = new Sequelize('postgres://admin:12345678@localhost:5432/account_db', {
+  dialect: 'postgres',
+});
+
+// 定义Account模型，映射到数据库中的accounts表
+const Account = sequelize.define('Account', {
+  id: {
+    type: DataTypes.BIGINT,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  lastSeen: {
+    type: DataTypes.DATE,
+  },
+  incomes: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+  },
+  expenses: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+  },
+  saving: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+});
+
+module.exports = { sequelize, Account };
+
+index.js内容如下：
+const { ApolloServer } = require('@apollo/server'); // Apollo Server 4.x
+const { buildSubgraphSchema } = require('@apollo/subgraph'); // Federation支持
+const express = require('express'); // 使用 Express 处理 HTTP 请求
+const { expressMiddleware } = require('@apollo/server/express4'); // Apollo Server 和 Express 集成
+const { typeDefs, resolvers } = require('./schema'); // 引入 schema 和 resolvers
+const { sequelize } = require('./db'); // 数据库连接
+const bodyParser = require('body-parser');
+
+// 创建 Apollo Server 实例，使用 Federation 支持
+const server = new ApolloServer({
+  schema: buildSubgraphSchema({
+    typeDefs,
+    resolvers,
+  }),
+});
+
+// 创建 Express 应用
+const app = express();
+
+// 启动 Apollo Server，并与 Express 集成
+async function startServer() {
+  // 启动 Apollo Server
+  await server.start();
+  app.use(bodyParser.json({ limit: '10mb' }));
+
+  // 使用 Apollo 中间件处理 /graphql 路由
+  app.use('/graphql', express.json(), expressMiddleware(server));
+
+  // 同步数据库并启动 Express 服务器
+  sequelize.sync().then(() => {
+    app.listen({ port: 4001 }, () => {
+      console.log(`🚀 Account Subgraph ready at http://localhost:4001/graphql`);
+    });
+  });
+}
+
+// 启动服务
+startServer();
+
+schema.js内容如下：
+const { gql } = require('apollo-server');
+const { Account } = require('./db');
+
+// GraphQL类型定义
+const typeDefs = gql`
+  type Account {
+    id: ID!
+    name: String!
+    lastSeen: String
+    incomes: [String]
+    expenses: [String]
+    saving: String!
+  }
+
+  type Query {
+    getAccountByName(name: String!): Account
+  }
+
+  input AccountInput {
+    name: String!
+    lastSeen: String
+    incomes: [String]
+    expenses: [String]
+    saving: String!
+  }
+
+  type Mutation {
+    updateAccount(account: AccountInput!): Account
+  }
+`;
+
+// GraphQL解析器定义
+const resolvers = {
+  Query: {
+    async getAccountByName(_, { name }) {
+      return await Account.findOne({ where: { name } });
+    },
+  },
+  Mutation: {
+    async updateAccount(_, { account }) {
+      const [updatedAccount] = await Account.upsert(account);
+      return updatedAccount;
+    },
+  },
+};
+
+module.exports = { typeDefs, resolvers };
+----------------------------------------------------
+现在，我有一个新的数据库要加入这个联合网关
+
+数据库类型为pg数据库，数据库名为statistic_db，表名为DataPoints，表的schema如下：
+"column_name"	"data_type"	"is_nullable"	"column_default"
+"statistics"	"jsonb"	"YES"	
+"id"	"jsonb"	"NO"	
+"rates"	"jsonb"	"YES"	
+"incomes"	"ARRAY"	"YES"	
+"expenses"	"ARRAY"	"YES"	
+一组示例数据为：
+"id"	"incomes"	"expenses"	"statistics"	"rates"	"createdAt"	"updatedAt"
+"{""date"": ""2024-10-23T12:00:00Z"", ""account"": ""Alice""}"	"{Salary:5000,Bonus:2000}"	"{Rent:1500,Groceries:500}"	"{""SAVING_AMOUNT"": 3000, ""INCOMES_AMOUNT"": 0, ""EXPENSES_AMOUNT"": 0}"	"{""EUR"": 0.85, ""RUB"": 75, ""USD"": 1, ""BASE"": 1}"	"2024-11-13 02:23:12.607+08"	"2024-12-09 12:46:43.944+08"
+
+在java程序中对该表的查询方式：
+一个由account查datapoint：getDataPointByAccount
+一个更新datapoint：updateDataPoint
+具体代码：
+@Override
+    public DataPoint save(String accountName, Account account) {
+        Instant today = LocalDate.now().atStartOfDay()
+                .atZone(ZoneId.systemDefault()).toInstant();
+        Date todayDate = Date.from(today);
+        
+        Optional<DataPoint> existingDataPoint = repository.findById(new DataPointId(accountName, todayDate));
+
+        Instant instant = LocalDate.now().atStartOfDay()
+                .atZone(ZoneId.systemDefault()).toInstant();
+
+        DataPointId pointId = new DataPointId(accountName, Date.from(instant));
+
+        Set<ItemMetric> incomes = account.getIncomes().stream()
+                .map(this::createItemMetric)
+                .collect(Collectors.toSet());
+
+        Set<ItemMetric> expenses = account.getExpenses().stream()
+                .map(this::createItemMetric)
+                .collect(Collectors.toSet());
+
+        DataPoint dataPoint = new DataPoint();
+        dataPoint.setId(pointId);
+        dataPoint.setIncomes(incomes);
+        dataPoint.setExpenses(expenses);
+
+        log.debug("New datapoint created: {}", pointId);
+
+        return repository.save(dataPoint);
+    }
+-------------------------------
+给出新增的项目结构、所有文件的完整代码。在一个回复中给出，用中文回答。
