@@ -1,0 +1,44 @@
+下面我将给出若干封装好的java函数，以及相关实体类代码。
+你的任务是，将这些java函数放到下面这个spring工程的service层的特定函数中独立实现：
+注意，这些封装的代码均是纯计算类代码，你不需要设计任何存储层的操作。
+public class Handler1 implements HandlerService {
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public JsonNode handle(JsonNode input) {
+        // 打印 JSON 内容
+        Iterator<Map.Entry<String, JsonNode>> fields = input.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fields.next();
+            //System.out.println("Handler1 - Key: " + entry.getKey() + ", Value: " + entry.getValue());
+        }
+
+        // 打印数据大小
+        int size = input.toString().getBytes().length;
+        //System.out.println("Handler1 - Data size: " + size + " bytes");
+
+        //实际执行函数，得到response_value
+
+        // 构造返回值
+        ArrayNode response_value = objectMapper.createArrayNode();
+
+        // 返回一个对象，其中 key 为 "stationapi1"，value 为刚才构造的数组列表
+        ObjectNode response = objectMapper.createObjectNode();
+        response.set("response_name", response_value);
+
+        return response;
+    }
+
+    @Override
+    public String getName() {
+        return "api_name";
+    }
+}
+并最终保证该代码能够被直接编译成插件，并暴露Handle函数以供调用。
+用户给出多少个计算代码块，你就要封装相应个数的插件。
+注意，这些封装的代码均是纯计算类代码，你不需要设计任何存储层的操作。
+你需要给出完整的项目结构，并给出每个文件里的完整代码，包括配置文件里面的配置。
+
+
+  

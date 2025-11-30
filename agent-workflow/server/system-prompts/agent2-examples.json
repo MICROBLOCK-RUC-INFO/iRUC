@@ -1,0 +1,26 @@
+[
+  {
+    "conversations": [
+      {
+        "role": "user",
+        "content": "public void saveChanges(String name, Account update) {\n\n\t\t// [2] 数据库操作代码块（从数据库中读取对象）\n\t\tAccount account = repository.findByName(name);\n\t\t\n\t\t// [4] 业务实体类的计算或校验逻辑代码块（对实体进行校验或处理，这里是校验实体是否存在）\n\t\tAssert.notNull(account, \"can't find account with name \" + name);\n\n\t\t// [4] 业务实体类的计算或修改代码块（对实体的属性进行修改）\n\t\taccount.setIncomes(update.getIncomes());\n\t\taccount.setExpenses(update.getExpenses());\n\t\taccount.setSaving(update.getSaving());\n\t\taccount.setLastSeen(new Date());\n\n\t\t// [2] 数据库操作代码块（将修改后的实体保存到数据库中）\n\t\trepository.save(account);\n\n\t\t// [1] 与业务实体类或对象操作无关的代码块（log输出）\n\t\tlog.debug(\"account {} changes has been saved\", name);\n\n\t\t// [3] 发送远程调用请求的代码块（通过feign或其他客户端进行微服务调用）\n\t\tstatisticsClient.updateStatistics(name, account);\n\t}"
+      },
+      {
+        "role": "assistant",
+        "content": "public void saveChanges(String name, Account update) {\n\n    // [2] 数据库操作代码块（从数据库中读取对象）\n    Account account = repository.findByName(name);\n\n    // [4] 将实体校验逻辑封装成独立函数\n    account = validateAccount(account, name);\n\n    // [4] 将实体属性更新与计算逻辑封装成独立函数\n    account = updateAccountProperties(account, update);\n\n    // [2] 数据库操作代码块（将修改后的实体保存到数据库中）\n    repository.save(account);\n\n    // [1] 与业务实体类或对象操作无关的代码块（log输出）\n    log.debug(\"account {} changes has been saved\", name);\n\n    // [3] 发送远程调用请求的代码块（通过feign或其他客户端进行微服务调用）\n    statisticsClient.updateStatistics(name, account);\n}\n\n// 封装的函数A - 校验实体是否存在并返回经过校验的实体\nprivate Account validateAccount(Account account, String name) {\n    Assert.notNull(account, \"can't find account with name \" + name);\n    return account;\n}\n\n// 封装的函数B - 更新实体属性并返回更新后的实体\nprivate Account updateAccountProperties(Account account, Account update) {\n    account.setIncomes(update.getIncomes());\n    account.setExpenses(update.getExpenses());\n    account.setSaving(update.getSaving());\n    account.setLastSeen(new Date());\n    return account;\n}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "role": "user",
+        "content": "public int create(PmsProductParam productParam) {\n        // [4] 业务实体类计算代码块（新建业务实体对象并设置属性）\n        PmsProduct product = new PmsProduct();\n        product.setName(productParam.getName());\n        product.setBrandId(productParam.getBrandId());\n        product.setLargeData(productParam.getLargeData());\n\n        // [2] 数据库操作代码块（插入数据库）\n        productMapper.insert(product);\n\n        // [4] 业务实体类计算代码块（对业务实体或其ID进行进一步处理）\n        Long productId = product.getId();\n        makechanges(productId);\n\n        // [4] 业务实体类计算代码块（新建品牌参数并设置属性）\n        PmsBrandParam brandParam = new PmsBrandParam();\n        brandParam.setName(\"UpdatedBrandFromProduct\");\n        brandParam.setFirstLetter(null);\n        brandParam.setLargeData(productParam.getLargeData());\n\n        // [3] 远程调用代码块（通过客户端更新远程品牌服务）\n        brandClient.updateBrand(productParam.getBrandId(), brandParam);\n\n        // [1] 与业务实体或对象操作无关的代码块（简单返回值）\n        return 1;\n    }"
+      },
+      {
+        "role": "assistant",
+        "content": "public int create(PmsProductParam productParam) {\n    // [4] 将创建PmsProduct对象并设置属性的代码块封装成函数A，返回PmsProduct对象\n    PmsProduct product = createProductFromParam(productParam);\n\n    // [2] 数据库操作代码块（插入数据库）\n    productMapper.insert(product);\n\n    // [4] 将获取productId并执行makechanges的代码块封装成函数B，返回productId\n    Long productId = prepareForChanges(product);\n\n    // [4] 将创建PmsBrandParam对象并设置属性的代码块封装成函数C，返回PmsBrandParam对象\n    PmsBrandParam brandParam = createBrandParam(productParam);\n\n    // [3] 远程调用代码块（通过客户端更新远程品牌服务）\n    brandClient.updateBrand(productParam.getBrandId(), brandParam);\n\n    // [1] 与业务实体或对象操作无关的简单返回值\n    return 1;\n}\n\n// 函数A - 封装创建PmsProduct及属性设置的逻辑\nprivate PmsProduct createProductFromParam(PmsProductParam productParam) {\n    PmsProduct product = new PmsProduct();\n    product.setName(productParam.getName());\n    product.setBrandId(productParam.getBrandId());\n    product.setLargeData(productParam.getLargeData());\n    return product;\n}\n\n// 函数B - 封装对productId执行进一步处理的逻辑，并返回productId\nprivate Long prepareForChanges(PmsProduct product) {\n    Long productId = product.getId();\n    makechanges(productId);\n    return productId;\n}\n\n// 函数C - 封装创建PmsBrandParam及属性设置的逻辑，并返回brandParam\nprivate PmsBrandParam createBrandParam(PmsProductParam productParam) {\n    PmsBrandParam brandParam = new PmsBrandParam();\n    brandParam.setName(\"UpdatedBrandFromProduct\");\n    brandParam.setFirstLetter(null);\n    brandParam.setLargeData(productParam.getLargeData());\n    return brandParam;\n}"
+      }
+    ]
+  }
+]

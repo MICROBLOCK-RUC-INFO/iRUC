@@ -1,0 +1,14 @@
+[
+  {
+    "conversations": [
+      {
+        "role": "user",
+        "content": "public void saveChanges(String name, Account update) {\n\n    // [2] 数据库操作代码块（从数据库中读取对象）\n    /*脚本\n    new account42 = gql query {\n        getAccountByName(name: init.name) {\n            id\n            name\n            lastSeen\n            incomes\n            expenses\n            saving\n        }\n    };\n    */\n    Account account = repository.findByName(name);\n\n    // [4] 将实体校验逻辑封装成独立函数\n    /*脚本\n    new account57 = myaccount.jar/validateAccountfunc(account42,init.name);\n    */\n    account = validateAccount(account, name);\n\n    // [4] 将实体属性更新与计算逻辑封装成独立函数\n    /*脚本\n    new account89 = myaccount.jar/updateAccountfunc(account57,init.update);\n    */\n    account = updateAccountProperties(account, update);\n\n    // [2] 数据库操作代码块（将修改后的实体保存到数据库中）\n    /*脚本\n    gql mutation {\n        updateAccount(account: {\n            name: account89.name,\n            lastSeen: account89.lastSeen,\n            incomes: account89.incomes,\n            expenses: account89.expenses,\n            saving: account89.saving\n        }) {\n            id\n            name\n            lastSeen\n            incomes\n            expenses\n            saving\n        }\n    };\n    */\n    repository.save(account);\n\n    // [1] 与业务实体类或对象操作无关的代码块（log输出）\n    log.debug(\"account {} changes has been saved\", name);\n\n    // [3] 发送远程调用请求的代码块（通过feign或其他客户端进行微服务调用）\n    /*脚本\n    output account-service.name = init.name;\n    output account-service.account = account89;\n    call statistics-service;\n    */\n    statisticsClient.updateStatistics(name, account);\n}\n当前服务名：account-service"
+      },
+      {
+        "role": "assistant",
+        "content": "service account-service {\n    new account42 = gql query {\n        getAccountByName(name: init.name) {\n            id\n            name\n            lastSeen\n            incomes\n            expenses\n            saving\n        }\n    };\n\n    new account57 = myaccount.jar/validateAccountfunc(account42,init.name);\n\n    new account89 = myaccount.jar/updateAccountfunc(account57,init.update);\n\n    gql mutation {\n        updateAccount(account: {\n            name: account89.name,\n            lastSeen: account89.lastSeen,\n            incomes: account89.incomes,\n            expenses: account89.expenses,\n            saving: account89.saving\n        }) {\n            id\n            name\n            lastSeen\n            incomes\n            expenses\n            saving\n        }\n    };\n\n    output account-service.name = init.name;\n    output account-service.account = account89;\n    call statistics-service;\n}"
+      }
+    ]
+  }
+]
